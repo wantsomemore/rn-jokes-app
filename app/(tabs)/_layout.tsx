@@ -1,35 +1,31 @@
-import { Tabs } from 'expo-router';
+import {Tabs} from 'expo-router';
 import React from 'react';
 
-import { TabBarIcon } from '@/components/navigation/TabBarIcon';
-import { Colors } from '@/constants/Colors';
-import { useColorScheme } from '@/hooks/useColorScheme';
+import TodayIcon from '@/assets/icons/Today';
+import HistoryIcon from '@/assets/icons/History';
 
 export default function TabLayout() {
-  const colorScheme = useColorScheme();
-
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
         headerShown: false,
+        tabBarActiveTintColor: '#9763FF',
+        tabBarStyle: {display: 'flex', alignItems: 'center', paddingVertical: 5},
+        tabBarItemStyle: {marginHorizontal: 20},
+        tabBarLabelStyle: {fontSize: 12, lineHeight: 16},
       }}>
       <Tabs.Screen
-        name="index"
+        name='index'
         options={{
-          title: 'Home',
-          tabBarIcon: ({ color, focused }) => (
-            <TabBarIcon name={focused ? 'home' : 'home-outline'} color={color} />
-          ),
+          title: 'Today',
+          tabBarIcon: ({focused}) => <TodayIcon color={focused ? '#9763FF' : '#C1C3C6'} />,
         }}
       />
       <Tabs.Screen
-        name="explore"
+        name='history'
         options={{
-          title: 'Explore',
-          tabBarIcon: ({ color, focused }) => (
-            <TabBarIcon name={focused ? 'code-slash' : 'code-slash-outline'} color={color} />
-          ),
+          title: 'History',
+          tabBarIcon: ({focused}) => <HistoryIcon color={focused ? '#9763FF' : '#C1C3C6'} />,
         }}
       />
     </Tabs>

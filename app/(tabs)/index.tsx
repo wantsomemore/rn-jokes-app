@@ -1,70 +1,117 @@
-import { Image, StyleSheet, Platform } from 'react-native';
+import {View, Text, StyleSheet, Pressable} from 'react-native';
+import {useCallback, useEffect} from 'react';
+import {useAppDispatch, useAppSelector} from '@/hooks/useStore';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import {jokesActions} from '@/store/reducers/JokesSlice';
+import JokesApi from '@/services/JokesApi';
+import {FavIcon} from '@/assets/icons/Fav';
+import {FavFilledIcon} from '@/assets/icons/FavFilled';
+import {EJokeType} from '@/enums/EJokeType';
+import {isToday, parseISO} from 'date-fns';
 
-import { HelloWave } from '@/components/HelloWave';
-import ParallaxScrollView from '@/components/ParallaxScrollView';
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
+export default function TodayJoke() {
+  const dispatch = useAppDispatch();
+  const {todayJoke} = useAppSelector((state) => state.jokesReducer);
 
-export default function HomeScreen() {
+  const getJoke = () => {
+    dispatch(JokesApi.getTodayJoke());
+  };
+
+  const loadJokesFromStorage = useCallback(async () => {
+    const savedJokes = await AsyncStorage.getItem('jokesData');
+    if (savedJokes) {
+      const jokesData = JSON.parse(savedJokes);
+      const todayJokeCreatedAt = jokesData.todayJoke?.createdAt;
+      if (todayJokeCreatedAt && isToday(parseISO(todayJokeCreatedAt))) {
+        dispatch(jokesActions.setJokesHistory(jokesData));
+      } else {
+        getJoke();
+      }
+    } else {
+      getJoke();
+    }
+  }, [dispatch]);
+
+  const likeJoke = () => {
+    dispatch(jokesActions.likeJoke(todayJoke));
+  };
+  const undoLikeJoke = () => {
+    dispatch(jokesActions.undoLikeJoke(todayJoke));
+  };
+
+  useEffect(() => {
+    loadJokesFromStorage();
+  }, [loadJokesFromStorage]);
+
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({ ios: 'cmd + d', android: 'cmd + m' })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-        <ThemedText>
-          Tap the Explore tab to learn more about what's included in this starter app.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          When you're ready, run{' '}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+    <View style={styles.container}>
+      <Text style={styles.header}>Today</Text>
+      {todayJoke ? (
+        <View style={styles.jokeContainer}>
+          {todayJoke.type === EJokeType.SINGLE ? (
+            <Text style={styles.jokeText}>{todayJoke.joke}</Text>
+          ) : (
+            <View>
+              <Text style={styles.jokeText}>{todayJoke?.setup}</Text>
+              <Text style={styles.jokeText}>{todayJoke?.delivery}</Text>
+            </View>
+          )}
+          <Pressable
+            onPress={todayJoke.liked ? undoLikeJoke : likeJoke}
+            style={[styles.likeButton, {backgroundColor: todayJoke.liked ? '#9763FF' : '#EAE0FF'}]}>
+            {todayJoke.liked ? <FavFilledIcon /> : <FavIcon />}
+          </Pressable>
+
+          <Pressable onPress={getJoke} style={styles.refreshButton}>
+            <Text style={styles.refreshButtonText}>Get a new joke</Text>
+          </Pressable>
+        </View>
+      ) : (
+        <Text>No joke loaded...</Text>
+      )}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
+  container: {flex: 1},
+  jokeContainer: {flex: 1, justifyContent: 'center', paddingHorizontal: 20},
+  likeButton: {
+    marginTop: 10,
+    borderRadius: 50,
+    width: 64,
+    height: 64,
+    display: 'flex',
+    justifyContent: 'center',
     alignItems: 'center',
-    gap: 8,
   },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
+  refreshButton: {
+    marginTop: 50,
+    borderRadius: 8,
+    width: 300,
+    height: 40,
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    alignSelf: 'center',
+    backgroundColor: '#fff',
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  refreshButtonText: {
+    fontSize: 18,
+    lineHeight: 22,
+    fontWeight: 500,
+    backgroundColor: '#fff',
   },
+  header: {
+    color: '#000',
+    fontSize: 36,
+    lineHeight: 48,
+    fontWeight: 700,
+    marginTop: 60,
+    paddingLeft: 20,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#D3D3D3',
+  },
+  jokeText: {fontSize: 24, lineHeight: 28, fontWeight: 500, color: '#000', marginBottom: 8},
 });
